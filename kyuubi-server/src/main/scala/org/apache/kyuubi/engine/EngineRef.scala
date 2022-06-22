@@ -31,7 +31,7 @@ import org.apache.kyuubi.config.KyuubiConf._
 import org.apache.kyuubi.config.KyuubiReservedKeys.KYUUBI_ENGINE_SUBMIT_TIME_KEY
 import org.apache.kyuubi.engine.EngineType.{EngineType, FLINK_SQL, HIVE_SQL, SPARK_SQL, TRINO}
 import org.apache.kyuubi.engine.ShareLevel.{CONNECTION, GROUP, SERVER, ShareLevel}
-import org.apache.kyuubi.engine.flink.FlinkProcessBuilder
+import org.apache.kyuubi.engine.flink.{FlinkProcessBuilder, FlinkProcessBuilder114, FlinkProcessBuilder115}
 import org.apache.kyuubi.engine.hive.HiveProcessBuilder
 import org.apache.kyuubi.engine.spark.SparkProcessBuilder
 import org.apache.kyuubi.engine.trino.TrinoProcessBuilder
@@ -176,7 +176,13 @@ private[kyuubi] class EngineRef(
         new SparkProcessBuilder(appUser, conf, engineRefId, extraEngineLog)
       case FLINK_SQL =>
         conf.setIfMissing(FlinkProcessBuilder.APP_KEY, defaultEngineName)
-        new FlinkProcessBuilder(appUser, conf, engineRefId, extraEngineLog)
+        val flinkVersion = conf.get(ENGINE_FLINK_VERSION)
+        flinkVersion match {
+          case "1.14" => new FlinkProcessBuilder114(appUser, conf, engineRefId, extraEngineLog)
+          case "1.15" => new FlinkProcessBuilder115(appUser, conf, engineRefId, extraEngineLog)
+          case _ =>
+            throw new Exception("Flink version: '" + flinkVersion + "' is not supported yet")
+        }
       case TRINO =>
         new TrinoProcessBuilder(appUser, conf, engineRefId, extraEngineLog)
       case HIVE_SQL =>

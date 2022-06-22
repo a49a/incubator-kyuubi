@@ -37,7 +37,7 @@ import org.apache.kyuubi.operation.log.OperationLog
 /**
  * A builder to build flink sql engine progress.
  */
-class FlinkProcessBuilder(
+abstract class FlinkProcessBuilder(
     override val proxyUser: String,
     override val conf: KyuubiConf,
     val engineRefId: String,
@@ -51,11 +51,15 @@ class FlinkProcessBuilder(
 
   val flinkHome: String = getEngineHome(shortName)
 
-  override protected def module: String = "kyuubi-flink-sql-engine"
-
-  override protected def mainClass: String = "org.apache.kyuubi.engine.flink.FlinkSQLEngine"
-
   override protected val commands: Array[String] = {
+    val flinkVersion = conf.get(ENGINE_FLINK_VERSION)
+    val mainClassWithVersion = flinkVersion match {
+      case "1.14" => "org.apache.kyuubi.engine.flink.FlinkSQLEngine114"
+      case "1.15" => "org.apache.kyuubi.engine.flink.FlinkSQLEngine115"
+      case _ => throw new Exception("Flink version: '" + flinkVersion + "' is not supported yet")
+    }
+    info(s"Set Flink engine version ${flinkVersion}")
+
     KyuubiApplicationManager.tagApplication(engineRefId, shortName, clusterManager(), conf)
     val buffer = new ArrayBuffer[String]()
     buffer += executable
@@ -112,7 +116,7 @@ class FlinkProcessBuilder(
       }
     }
     buffer += classpathEntries.asScala.mkString(File.pathSeparator)
-    buffer += mainClass
+    buffer += mainClassWithVersion
 
     buffer += "--conf"
     buffer += s"$KYUUBI_SESSION_USER_KEY=$proxyUser"

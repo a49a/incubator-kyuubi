@@ -1678,6 +1678,13 @@ object KyuubiConf {
       .stringConf
       .createOptional
 
+  val ENGINE_FLINK_VERSION: ConfigEntry[String] =
+    buildConf("kyuubi.engine.flink.version")
+      .doc("The version of the flink sql engine")
+      .version("1.7.0")
+      .stringConf
+      .createWithDefault("1.15")
+
   val ENGINE_FLINK_MEMORY: ConfigEntry[String] =
     buildConf("kyuubi.engine.flink.memory")
       .doc("The heap memory for the flink sql engine")
