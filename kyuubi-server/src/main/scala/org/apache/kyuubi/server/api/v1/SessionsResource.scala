@@ -32,6 +32,7 @@ import org.apache.hive.service.rpc.thrift.{TGetInfoType, TProtocolVersion}
 import org.apache.kyuubi.Logging
 import org.apache.kyuubi.client.api.v1.dto
 import org.apache.kyuubi.client.api.v1.dto._
+import org.apache.kyuubi.client.api.v1.dto.iceberg.{IcebergUtil, RewriteDataFilesRequest}
 import org.apache.kyuubi.events.KyuubiEvent
 import org.apache.kyuubi.operation.OperationHandle
 import org.apache.kyuubi.server.api.ApiRequestContext
@@ -178,6 +179,32 @@ private[v1] class SessionsResource extends ApiRequestContext with Logging {
       fe.be.executeStatement(
         sessionHandleStr,
         request.getStatement,
+        Map.empty,
+        request.isRunAsync,
+        request.getQueryTimeout)
+    } catch {
+      case NonFatal(e) =>
+        val errorMsg = "Error executing statement"
+        error(errorMsg, e)
+        throw new NotFoundException(errorMsg)
+    }
+  }
+
+  @ApiResponse(
+    responseCode = "200",
+    content = Array(new Content(
+      mediaType = MediaType.APPLICATION_JSON,
+      schema = new Schema(implementation = classOf[OperationHandle]))),
+    description = "Execute an iceberg rewrite data files procedure")
+  @POST
+  @Path("{sessionHandle}/operations/iceberg/procedure/rewriteDataFiles")
+  def icebergRewriteDataFiles(
+      @PathParam("sessionHandle") sessionHandleStr: String,
+      request: RewriteDataFilesRequest): OperationHandle = {
+    try {
+      fe.be.executeStatement(
+        sessionHandleStr,
+        IcebergUtil.generateRewriteSQL(request),
         Map.empty,
         request.isRunAsync,
         request.getQueryTimeout)
